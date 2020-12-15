@@ -1,5 +1,5 @@
 local utils = {
-	default_font = love.graphics.newFont(14),
+	--default_font = love.graphics.newFont(14),
 	nodeTypes = {
 		LABEL 	= 1,
 		BUTTON 	= 2,
@@ -21,15 +21,15 @@ local utils = {
 	scroll_speed = 0.05,
 }
 
-function utils.isLabel(node) return node.type == utils.nodeTypes.LABEL end
-function utils.isPanel(node) return node.type == utils.nodeTypes.PANEL end
-function utils.isMulti(node) return node.type == utils.nodeTypes.MULTI_OPTION end
-function utils.isImage(node) return node.type == utils.nodeTypes.IMAGE end
-function utils.isToggle(node) return node.type == utils.nodeTypes.TOGGLE end
-function utils.isSlider(node) return node.type == utils.nodeTypes.SLIDER end
-function utils.isButton(node) return node.type == utils.nodeTypes.BUTTON end
-function utils.isTextField(node) return node.type == utils.nodeTypes.TEXT end
-function utils.isJoy(node) return node.type == utils.nodeTypes.JOY end
+function utils.isLabel(node) return node.node_type == utils.nodeTypes.LABEL end
+function utils.isPanel(node) return node.node_type == utils.nodeTypes.PANEL end
+function utils.isMulti(node) return node.node_type == utils.nodeTypes.MULTI_OPTION end
+function utils.isImage(node) return node.node_type == utils.nodeTypes.IMAGE end
+function utils.isToggle(node) return node.node_type == utils.nodeTypes.TOGGLE end
+function utils.isSlider(node) return node.node_type == utils.nodeTypes.SLIDER end
+function utils.isButton(node) return node.node_type == utils.nodeTypes.BUTTON end
+function utils.isTextField(node) return node.node_type == utils.nodeTypes.TEXT end
+function utils.isJoy(node) return node.node_type == utils.nodeTypes.JOY end
 
 function utils.textWidth(node)
 	if not node.text then return 0 end
@@ -83,7 +83,6 @@ utils.colors = {
 }
 
 utils.style = {
-	padding = utils.default_font:getHeight() / 2,
 	bgColor = utils.colors.LOVE_BLUE,
 	fgColor = utils.colors.WHITE,
 	disablebgColor = utils.colors.GRAY,

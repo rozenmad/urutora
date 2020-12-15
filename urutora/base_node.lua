@@ -10,17 +10,22 @@ function base_node:constructor()
 	self.callback = function () end
 	self.textAlign = self.textAlign or utils.textAlignments.CENTER
 
-	self:setBounds(
-		self.x or 1,
-		self.y or 1,
-		self.w or 16,
-		self.h or 16
-	)
-
 	self.style = utils.style
+
+	self.bounds_calculated = false
 
 	self.enabled = true
 	self.visible = true
+	self.padding = self.padding or utils.default_font:getHeight() / 2
+
+	self.x = self.x or 1
+	self.y = self.y or 1
+	self.w = self.w or 16
+	self.h = self.h or 16
+	self.px = self.x
+	self.py = self.y
+	self.npw = self.w
+	self.nph = self.h
 end
 
 function base_node:centerX()
@@ -32,20 +37,39 @@ end
 
 function base_node:setBounds(x, y, w, h)
 	local f = utils.default_font
-	self.padding = utils.style.padding
+
+	local pxa, pya
+	if type(self.padding) == 'table' then
+		pxa = self.padding[1]
+		pya = self.padding[2]
+	else
+		pxa = self.padding
+		pya = pxa
+	end
 
 	self.x = x
 	self.y = y
-	self.w = w or f:getWidth(self.text) + self.padding * 2
-	self.h = h or f:getHeight() + self.padding * 2
-	self.px  = self.x + self.padding
-	self.py  = self.y + self.padding
-	self.npw = self.w - self.padding * 2
-	self.nph = self.h - self.padding * 2
+	self.w = w or f:getWidth(self.text) + pxa * 2
+	self.h = h or f:getHeight() + pya * 2
+	self.px  = self.x + pxa
+	self.py  = self.y + pya
+	self.npw = self.w - pxa * 2
+	self.nph = self.h - pya * 2
+
+	local text = tostring(self.text)
+	if self.text and #text > 0 then
+		self:setText(text)
+	else
+		self._tx = 0
+		self._ty = 0
+		self.line_limit = self.npw
+	end
+
+	self.bounds_calculated = true
 end
 
 function base_node:setStyle(style, lock)
-	if self.style.lock and not lock then return end
+	if self.style.lock and not lock then return self end
 
 	local t = { lock = lock }
 	for k, v in pairs(self.style) do
@@ -159,27 +183,51 @@ function base_node:drawBaseRectangle(color, ...)
 	utils.rect('fill', x, y, w, h)
 end
 
+function base_node:setText(text)
+	text = text or ''
+	local font = self.style.font or utils.default_font
+
+	local lines = math.ceil(self.nph / font:getHeight())
+	local _, wrappedtext = font:getWrap(text, self.npw)
+	lines = (#wrappedtext < lines) and #wrappedtext or lines
+	text = table.concat(wrappedtext, '\n', 1, lines)
+
+	local sy = lines * font:getHeight()
+
+	self._tx = 0
+	self._ty = (self.nph - sy) / 2
+
+	self.text = text
+	self.line_limit = self.npw
+end
+
 function base_node:drawText(color)
 	local text = self.text
 
-	if (not text) or (#text == 0) then
+	if (not text) or (#tostring(text) == 0) then
 		return
 	end
 
-	local _, fgc = self:getLayerColors()
-	local x = self:centerX() - utils.textWidth(self) / 2
-	local y = self:centerY() - utils.textHeight(self) / 2
-	if self.type == utils.nodeTypes.TEXT then
-		x = math.floor(self.x)
-	elseif self.textAlign == utils.textAlignments.LEFT then
-		x = math.floor(self.px)
+	local align = 'center'
+	if self.textAlign == utils.textAlignments.LEFT then
+		align = 'left'
 	elseif self.textAlign == utils.textAlignments.RIGHT then
-		x = math.floor(self.px + self.npw - utils.textWidth(self))
+		align = 'right'
 	end
 
+	local x = math.floor(self.px)
+	local y = math.floor(self.py)
+	local _, fgc = self:getLayerColors()
 	lovg.setFont(self.style.font or utils.default_font)
 	lovg.setColor(color or fgc)
-	utils.print(text, x, y)
+	love.graphics.printf(self.text, x + self._tx, y + self._ty, self.line_limit, align)
+end
+
+function base_node:drawOutline()
+	if self.outline then
+		lovg.setColor(self.style.outlineColor)
+		utils.rect('line', self.x, self.y, self.w, self.h)
+	end
 end
 
 function base_node:performPressedAction(data)
@@ -199,9 +247,9 @@ function base_node:performPressedAction(data)
 end
 
 function base_node:performKeyboardAction(data)
-	if self.type == utils.nodeTypes.TEXT then
+	if self.node_type == utils.nodeTypes.TEXT then
 		if self.focused then
-			local previousText = data.text
+			local previousText = self.text
 			self:textInput(data.text, data.scancode)
 			self.callback({ target = self, value = {
 				previousText = previousText,
@@ -216,11 +264,11 @@ end
 function base_node:performMovedAction(data)
 	if not self.enabled then return end
 
-	if self.type == utils.nodeTypes.SLIDER then
+	if self.node_type == utils.nodeTypes.SLIDER then
 		if self.focused then
 			self.callback({ target = self, value = self.value })
 		end
-	elseif self.type == utils.nodeTypes.JOY then
+	elseif self.node_type == utils.nodeTypes.JOY then
 		if self.pressed then
 			self.joyX = self.joyX + data.dx / utils.sx
 			self.joyY = self.joyY + data.dy / utils.sy
@@ -234,18 +282,18 @@ function base_node:performReleaseAction(data)
 
 	if self.pressed then
 		if self.pointed then
-			if self.type == utils.nodeTypes.BUTTON then
+			if self.node_type == utils.nodeTypes.BUTTON then
 				self.callback({ target = self })
-			elseif self.type == utils.nodeTypes.TOGGLE then
+			elseif self.node_type == utils.nodeTypes.TOGGLE then
 				self:change()
 				self.callback({ target = self, value = self.value })
-			elseif self.type == utils.nodeTypes.MULTI then
+			elseif self.node_type == utils.nodeTypes.MULTI then
 				self:change()
 				self.callback({ target = self, value = self.text })
 			end
 		end
 
-		if self.type == utils.nodeTypes.JOY then
+		if self.node_type == utils.nodeTypes.JOY then
 			self.callback({ target = self, value = {
 				lastX = self.joyX,
 				lastY = self.joyY
@@ -261,10 +309,10 @@ function base_node:performMouseWheelAction(data)
 	if not self.enabled then return end
 
 	if self.pointed then
-		if self.type == utils.nodeTypes.PANEL then
+		if self.node_type == utils.nodeTypes.PANEL then
 			local v = self:getScrollY()
 			self:setScrollY(v + (-data.y) * utils.scroll_speed)
-		elseif self.type == utils.nodeTypes.SLIDER then
+		elseif self.node_type == utils.nodeTypes.SLIDER then
 			self:setValue(self.value + (-data.y) * utils.scroll_speed)
 			self.callback({ target = self, value = self.value })
 		end

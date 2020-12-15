@@ -32,56 +32,56 @@ end
 
 function urutora.panel(data, nameid)
 	local node = panel:new_from(data)
-	node.type = utils.nodeTypes.PANEL
+	node.node_type = utils.nodeTypes.PANEL
 	node.nameid = nameid
 	return node
 end
 
 function urutora.image(data)
 	local node = image:new_from(data)
-	node.type = utils.nodeTypes.IMAGE
+	node.node_type = utils.nodeTypes.IMAGE
 	return node
 end
 
 function urutora.label(data)
 	local node = base_node:new_from(data)
-	node.type = utils.nodeTypes.LABEL
+	node.node_type = utils.nodeTypes.LABEL
 	return node
 end
 
 function urutora.text(data)
 	local node = text:new_from(data)
-	node.type = utils.nodeTypes.TEXT
+	node.node_type = utils.nodeTypes.TEXT
 	return node
 end
 
 function urutora.multi(data)
 	local node = multi:new_from(data)
-	node.type = utils.nodeTypes.MULTI
+	node.node_type = utils.nodeTypes.MULTI
 	return node
 end
 
 function urutora.button(data)
 	local node = base_node:new_from(data)
-	node.type = utils.nodeTypes.BUTTON
+	node.node_type = utils.nodeTypes.BUTTON
 	return node
 end
 
 function urutora.slider(data)
 	local node = slider:new_from(data)
-	node.type = utils.nodeTypes.SLIDER
+	node.node_type = utils.nodeTypes.SLIDER
 	return node
 end
 
 function urutora.toggle(data)
 	local node = toggle:new_from(data)
-	node.type = utils.nodeTypes.TOGGLE
+	node.node_type = utils.nodeTypes.TOGGLE
 	return node
 end
 
 function urutora.joy(data)
 	local node = joy:new_from(data)
-	node.type = utils.nodeTypes.JOY
+	node.node_type = utils.nodeTypes.JOY
 	return node
 end
 
@@ -89,6 +89,14 @@ end
 -------------------------------------------------------------
 
 function urutora:add(component)
+	component:setBounds(
+		component.x,
+		component.y,
+		component.w,
+		component.h
+	)
+
+	if utils.isPanel(component) then component:_update_nodes_position() end
 	table.insert(self.nodes, component)
 end
 
@@ -138,7 +146,10 @@ function urutora:setFocusedNode(node)
 	for _, v in ipairs(self.nodes) do
 		if utils.isPanel(v) then
 			v:forEach(function (_node)
-				_node.focused = false
+				if _node.focused then
+					_node.focused = false
+					if _node.focusLost then _node:focusLost() end
+				end
 			end)
 		else
 			v.focused = false
@@ -162,6 +173,8 @@ function urutora:draw()
 			if not utils.isPanel(v) then
 				v:drawText()
 			end
+
+			v:drawOutline()
 		end
 	end
 
@@ -179,11 +192,18 @@ function urutora:update(dt)
 	end
 end
 
-function urutora:pressed(x, y)
+function urutora:pressed(x, y, button, istouch, presses)
 	self.focused_node = nil
 	for _, v in ipairs(self.nodes) do
 		if v.enabled then
-			v:performPressedAction({ x = x, y = y, urutora = self })
+			v:performPressedAction({
+				x = x,
+				y = y,
+				button = button,
+				istouch = istouch,
+				presses = presses,
+				urutora = self
+			})
 		end
 	end
 	self:setFocusedNode(self.focused_node)
@@ -200,11 +220,14 @@ function urutora:moved(x, y, dx, dy)
 	end
 end
 
-function urutora:released(x, y)
+function urutora:released(x, y, button, istouch, presses)
 	for _, v in ipairs(self.nodes) do
 		v:performReleaseAction({
 			x = x,
-			y = y
+			y = y,
+			button = button,
+			istouch = istouch,
+			presses = presses
 		})
 	end
 end
@@ -241,7 +264,7 @@ local function find_nested_pointed(node)
 					break
 				end
 			end
-		elseif utils.isSlider(node) then
+		elseif node.scrollable then
 			t = node
 		end
 	end

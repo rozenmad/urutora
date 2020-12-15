@@ -7,13 +7,16 @@ local lovg = love.graphics
 local panel = base_node:extend('panel')
 
 function panel:constructor()
+	self.padding = self.padding or 0
+	self.spacing = self.spacing or 1
+
 	panel.super.constructor(self)
 	self.children = {}
 	self.rows = self.rows or 1
 	self.cols = self.cols or 1
 	self.rowspans = {}
 	self.colspans = {}
-	self.spacing = self.spacing or 1
+
 	self.ox = self.ox or 0
 	self.oy = self.oy or 0
 
@@ -40,7 +43,7 @@ function panel:clear()
 end
 
 function panel:calculateRect(row, col)
-	local w, h = self.csx or (self.w / self.cols), self.csy or (self.h / self.rows)
+	local w, h = self.csx or (self.npw / self.cols), self.csy or (self.nph / self.rows)
 	local x, y = w * (col - 1), h * (row - 1)
 	local s = self.spacing / 2
 	local rs = (self.rowspans[col] or {})[row] or 1
@@ -54,21 +57,22 @@ function panel:calculateRect(row, col)
 	if self._maxx < mx then self._maxx = mx end
 	if self._maxy < my then self._maxy = my end
 
-	x, y = self.x + x + s, self.y + y + s
+	x, y = self.px + x + s, self.py + y + s
 	w, h = (wcs - s * 2), (hrs - s * 2)
 	return x, y, w, h
 end
 
 function panel:addAt(row, col, newNode)
 	local x, y, w, h = self:calculateRect(row, col)
-	newNode:setBounds(x, y, w, h)
 	newNode.parent = self
 	newNode._row = row
 	newNode._col = col
 	self.children[row * self.cols + col] = newNode
 
-	--recalculate panel nodes position
-	if utils.isPanel(newNode) then newNode:_update_nodes_position() end
+	if self.bounds_calculated then
+		newNode:setBounds(x, y, w, h)
+		if utils.isPanel(newNode) then newNode:_update_nodes_position() end
+	end
 	return self
 end
 
@@ -133,8 +137,7 @@ function panel:colspanAt(row, col, size)
 end
 
 function panel:moveTo(x, y)
-	self.x = math.floor(x)
-	self.y = math.floor(y)
+	self:setBounds(x, y, self.w, self.h)
 	self:_update_nodes_position()
 end
 
@@ -171,21 +174,19 @@ function panel:draw()
 	lovg.translate(math.floor(-self.ox), math.floor(-self.oy))
 	lovg.intersectScissor(x - ox, y - oy, self.w, self.h)
 
+	self:drawBaseRectangle({1, 1, 1, 1})
+
 	for _, node in pairs(self.children) do
 		if node.visible then
 			if utils.needsBase(node) then node:drawBaseRectangle() end
 			if node.draw then node:draw() end
 			node:drawText()
+			node:drawOutline()
 		end
 	end
 
 	lovg.setScissor(scx, scy, scsx, scsy)
 	lovg.pop()
-
-	if self.outline then
-		lovg.setColor(self.style.outlineColor)
-		utils.rect('line', x, y, self.w, self.h)
-	end
 end
 
 function panel:update(dt)

@@ -12,11 +12,12 @@ function slider:constructor()
 	self.minValue = self.minValue or 0
 	self.value = self.value or 0.5
 	self.axis = self.axis or 'x'
+	self.scrollable = true
 end
 
 function slider:draw()
 	local _, fgc = self:getLayerColors()
-	lovg.setColor(fgc)
+	lovg.setColor(utils.brighter(fgc))
 
 	if self.axis == 'x' then
 		local w = 24

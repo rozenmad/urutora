@@ -1,5 +1,7 @@
+local utf8 = require('utf8')
+
 local utils = {
-	--default_font = love.graphics.newFont(14),
+	default_font = love.graphics.newFont(14),
 	nodeTypes = {
 		LABEL 	= 1,
 		BUTTON 	= 2,
@@ -40,6 +42,27 @@ function utils.textHeight(node)
 	if not node.text then return 0 end
 	local font = node.style.font or utils.default_font
 	return font:getHeight()
+end
+
+function utils.utf8sub(s, i, j)
+	local length = utf8.len(s) + 1
+	if not length then return nil end
+	i = i or  1
+	j = j or -1
+	if j < 0 then j = length + j end
+	if i < 0 then i = length + i end
+	if i > j then return '' end
+
+	i = utf8.offset(s, i)
+	j = utf8.offset(s, j + 1)
+
+	if i and j then
+		return s:sub(i, j-1)
+	elseif i then
+		return s:sub(i)
+	else
+		return ""
+	end
 end
 
 function utils.toRGB(hex)

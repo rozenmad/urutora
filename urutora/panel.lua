@@ -80,7 +80,7 @@ function panel:getChildren(row, col)
 	return self.children[row * self.cols + col]
 end
 
-function panel:findFromTag(tag)
+function panel:findChildren(tag)
 	for _, v in pairs(self.children) do
 		if v.tag and v.tag == tag then
 			return v

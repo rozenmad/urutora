@@ -1,6 +1,7 @@
 local modules = (...):gsub('%.[^%.]+$', '') .. '.'
 local class = require(modules .. 'class')
 local utils = require(modules .. 'utils')
+local utf8 = require('utf8')
 
 local lovg = love.graphics
 
@@ -66,6 +67,7 @@ function base_node:setBounds(x, y, w, h)
 	end
 
 	self.bounds_calculated = true
+	return self
 end
 
 function base_node:setStyle(style, lock)
@@ -183,6 +185,10 @@ function base_node:drawBaseRectangle(color, ...)
 	utils.rect('fill', x, y, w, h)
 end
 
+function base_node:getTextLength()
+	return utf8.len(self.text or '')
+end
+
 function base_node:setText(text)
 	text = text or ''
 	local font = self.style.font or utils.default_font
@@ -199,6 +205,7 @@ function base_node:setText(text)
 
 	self.text = text
 	self.line_limit = self.npw
+	return self
 end
 
 function base_node:drawText(color)
@@ -208,19 +215,12 @@ function base_node:drawText(color)
 		return
 	end
 
-	local align = 'center'
-	if self.textAlign == utils.textAlignments.LEFT then
-		align = 'left'
-	elseif self.textAlign == utils.textAlignments.RIGHT then
-		align = 'right'
-	end
-
 	local x = math.floor(self.px)
 	local y = math.floor(self.py)
 	local _, fgc = self:getLayerColors()
 	lovg.setFont(self.style.font or utils.default_font)
 	lovg.setColor(color or fgc)
-	love.graphics.printf(self.text, x + self._tx, y + self._ty, self.line_limit, align)
+	love.graphics.printf(self.text, x + self._tx, y + self._ty, self.line_limit, self.textAlign)
 end
 
 function base_node:drawOutline()

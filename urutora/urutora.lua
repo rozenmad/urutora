@@ -142,6 +142,22 @@ function urutora:deactivateByTag(tag)
 	return self
 end
 
+function urutora:find(tag)
+	local list = {}
+	local function add_to_list(node)
+		if node.tag and node.tag == tag then
+			table.insert(list, node)
+		end
+	end
+	for _, v in ipairs(self.nodes) do
+		add_to_list(v)
+		if utils.isPanel(v) then
+			v:forEach(add_to_list)
+		end
+	end
+	return list
+end
+
 function urutora:setFocusedNode(node)
 	for _, v in ipairs(self.nodes) do
 		if utils.isPanel(v) then
